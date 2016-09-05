@@ -23,7 +23,7 @@ module.exports = function(_module) {
   const tools = {};
 
   tools.startGeth = function*(options) {
-    this.geth = geth(_.extend({
+    this.geth = geth(Object.assign({
       gethOptions: {
         rpcport: 38545,
         port: 21313

@@ -17,7 +17,7 @@ class Processor {
    * 
    * @param {Object} config Configuration.
    * @param {Object} config.web3 A `Web3` instance.
-   * @param {Number} [config.loopDelayMs=3000] Milliseconds between checks for new blocks.
+   * @param {Number} [config.loopDelayMs=5000] Milliseconds between block processing loop.
    * @param {Object} [config.logger=null] For logging progress updates. If not set then no logging is done. You may set this to `console`.
    * @param {Number} [config.lastBlock=0] Last block that got processed. If set all blocks since will be fetched and processed as soon as the processor starts.
    */
@@ -25,7 +25,7 @@ class Processor {
     this._config = config;
     this._web3 = config.web3;
     this._logger = config.logger || LOGGER;
-    this._loopDelayMs = config.loopDelayMs || 3000;
+    this._loopDelayMs = config.loopDelayMs || 5000;
     this._lastBlock = config.lastBlock || 0;
 
     this._blocks = [];
@@ -36,7 +36,7 @@ class Processor {
   }
 
   /**
-   * Get whether this processor is connected to the node, i.e. whether web3 is connected.
+   * Get whether this processor is connected to the node.
    * @return {Boolean}
    */
   get isConnected () {
@@ -48,7 +48,7 @@ class Processor {
    * Get whether this processor is currently running.
    * @return {Boolean}
    */
-  get isProcessor () {
+  get isRunning () {
     return !!this._filter;
   }
 
@@ -88,7 +88,7 @@ class Processor {
       if (!this.isRunning) {
         this._blocks = [];
         
-        this._filter = this.web3.eth.filter('latest');
+        this._filter = this._web3.eth.filter('latest');
         
         // need this delay here otherwise when the filter callback gets called, 
         // this._filter may not be set yet. Usually happens if we're mining too 
