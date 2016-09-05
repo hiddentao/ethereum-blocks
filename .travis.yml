@@ -18,4 +18,3 @@ script:
 notifications:
   email:
     - ram@hiddentao.com
-
