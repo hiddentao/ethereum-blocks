@@ -289,6 +289,8 @@ class Processor {
     for (let handler of this._handlers) {
       try {
         handler.fn(eventType, blockId, data);
+
+        this.logger.info(`Invoked handler ${handler.id} for block ${blockId}`);
       } catch (err) {
         this.logger.error(`Handler '${handler.id}' errored for invocation: ${eventType}, ${blockId}`);
       }
