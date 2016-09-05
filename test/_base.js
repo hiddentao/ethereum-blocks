@@ -6,6 +6,7 @@ process.env.NODE_ENV = 'test';
 require('co-mocha'); // monkey-patch mocha
 
 const path = require('path'),
+  Q = require('bluebird'),
   genomatic = require('genomatic'),
   geth = require('geth-private'),
   chai = require('chai'),
@@ -50,11 +51,40 @@ module.exports = function(_module) {
     yield this.geth.consoleExec(cmd);
   };
 
-  tools.gethStartMining = function*() {
+  tools.getBlock = function*(blockIdOrNumber) {
+    console.log(`web3.eth.getBlock: ${blockIdOrNumber}`);
+    
+    return yield new Q((resolve, reject) => {
+      this.web3.eth.getBlock(blockIdOrNumber, (err, block) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(block);
+        }
+      });
+    });
+  };
+  
+  tools.waitUntilNextBlock = function*() {
+    const blockNum = this.web3.eth.blockNumber;
+    
+    yield new Q((resolve) => {
+      const _waitIntervalTimer = setInterval(() => {
+        if (this.web3.eth.blockNumber !== blockNum) {
+          clearInterval(_waitIntervalTimer);
+
+          // let other processing take place before we return
+          setTimeout(resolve);
+        }
+      }, 2000)
+    });
+  };
+
+  tools.startMining = function*() {
     yield this.gethExec('miner.start();');
   }
 
-  tools.gethStopMining = function*() {
+  tools.stopMining = function*() {
     yield this.gethExec('miner.stop();');
   }
 

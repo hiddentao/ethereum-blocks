@@ -14,18 +14,34 @@ test['nothing by default'] = function*() {
 };
 
 
-test['set to custom'] = function*() {
+test['turn on and off'] = function*() {
   let spy = this.mocker.spy();
   
-  let mgr = new this.Manager({
-    logger: {
-      info: spy,
-    }
-  });
+  let mgr = new this.Manager({});
+  mgr.logger = {
+    info: this.mocker.spy(),
+  };
   
   mgr.registerHandler('test', function() {});
+
+  spy.should.have.been.calledWithExactly(`Registered handler: test`);
   
-  spy.should.have.been.calledWithExactly(`Registering handler: test`);
+  mgr.logger = null;
+
+  mgr.registerHandler('test2', function() {});
+  
+  spy.callCount.should.eql(1);
+};
+
+
+
+test['must be valid logger'] = function*() {
+  let spy = this.mocker.spy();
+  
+  let mgr = new this.Manager({});
+  mgr.logger = 'blah';
+  
+  mgr.registerHandler('test', function() {});
 };
 
 

@@ -17,22 +17,19 @@ class Processor {
    * 
    * @param {Object} config Configuration.
    * @param {Object} config.web3 A `Web3` instance.
-   * @param {Number} [config.loopDelayMs=5000] Milliseconds between block processing loop.
-   * @param {Object} [config.logger=null] For logging progress updates. If not set then no logging is done. You may set this to `console`.
-   * @param {Number} [config.lastBlock=0] Last block that got processed. If set all blocks since will be fetched and processed as soon as the processor starts.
    */
   constructor (config) {
     this._config = config;
     this._web3 = config.web3;
-    this._logger = config.logger || LOGGER;
-    this._loopDelayMs = config.loopDelayMs || 5000;
-    this._lastBlock = config.lastBlock || 0;
 
     this._blocks = [];
     this._handlers = new Set();
     
     this._filterCallback = this._filterCallback.bind(this);
     this._loop = this._loop.bind(this);
+    
+    this.logger = null;
+    this.loopInterval = 5000;
   }
 
   /**
@@ -54,6 +51,45 @@ class Processor {
 
 
   /**
+   * Get the loop interval in ms.
+   * @return {Number}
+   */
+  get loopInterval () {
+    return this._loopIntervalMs;
+  }
+  /**
+   * Set the loop interval in ms.
+   * @param {Number} val
+   */
+  set loopInterval (val) {
+    this._loopIntervalMs = val;
+  }
+
+
+  /**
+   * Get the logger.
+   * @return {Object}
+   */
+  get logger () {
+    return this._logger;
+  }
+  /**
+   * Set the logger.
+   * @param {Object} val Should have same methods as global `console` object.
+   */
+  set logger (val) {
+    this._logger = {};
+    
+    for (let key in console) {
+      this._logger[key] = (val && typeof val[key] === 'function') 
+        ? val[key].bind(val)
+        : console[key]
+      ;
+    }
+  }
+  
+  
+  /**
    * Stop processing blocks.
    * @return {Promise} Resolves to `true` if stopped, `false` if not running.
    */
@@ -67,10 +103,10 @@ class Processor {
           this._filter = null;                  
           this._blocks = [];
           
-          this._logger.info('Stopped');
+          this.logger.info('Stopped');
           resolve(true);
         } else {
-          this._logger.warn('Not currently processing');
+          this.logger.warn('Not currently processing');
           resolve(false);
         }
       } catch (err) {
@@ -84,7 +120,7 @@ class Processor {
    * @return {Promise} Resolves to `true` if started, `false` if already running.
    */
   start () {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (!this.isRunning) {
         this._blocks = [];
         
@@ -96,12 +132,14 @@ class Processor {
         setTimeout(() => {
           this._filter.watch(this._filterCallback);
           
+          this.logger.info('Started');
           this._loop();
           
           resolve(true);
+          
         });
       } else {
-        this._logger.warn('Already running');
+        this.logger.warn('Already running');
         
         resolve(false);
       }
@@ -115,12 +153,12 @@ class Processor {
    * @param {Function} fn Callback function of handler.
    */
   registerHandler (id, fn) {
-    this._logger.info(`Registering handler: ${id}`);
-    
     this._handlers.add({
       id: id,
       fn: fn
     });
+    
+    this.logger.info(`Registered handler: ${id}`);
   }
   
   /**
@@ -128,9 +166,9 @@ class Processor {
    * @param {Object} handler A handler object returned from a previous call to `registerHandler`.
    */
   deregisterHandler (handler) {
-    this._logger.info(`Deregistering handler: ${handler.id}`);
-
     this._handlers.delete(handler);
+    
+    this.logger.info(`Deregistered handler: ${handler.id}`);
   }
 
 
@@ -139,25 +177,44 @@ class Processor {
    */
   _loop () {
     if (!this.isRunning) {
-      this._logger.warn('Not running, so exiting loop');
+      this.logger.warn('Not running, so exiting loop');
       
       return;
     }
 
-    if (this._blocks.length) {
-      const blockId = this._blocks.shift();
-
-      this._processBlock(blockId)
-      .finally(() => {
-        if (!this.isRunning) {
-          this._logger.warn('Not running, so exiting loop');
-          
-          return;
-        }
-          
-        this._loopTimeout = setTimeout(this._loop, this._loopDelayMs);
-      });
-    }
+    new Promise((resolve) => {
+      const numBlocks = this._blocks.length;
+      
+      if (!numBlocks) {
+        return resolve();
+      }
+      
+      this.logger.info(`Got ${numBlocks} block(s) to process`);
+        
+      // remove blocks from backlog array
+      const blockIds = this._blocks.splice(0, numBlocks);
+        
+      let blocksProcessed = 0;
+      
+      for (let blockId of blockIds) {
+        this._processBlock(blockId)
+        .then(() => {
+          blocksProcessed++;
+          if (numBlocks <= blocksProcessed) {
+            resolve();
+          }
+        });   
+      } 
+    })
+    .then(() => {
+      if (!this.isRunning) {
+        this.logger.warn('Not running, so exiting loop');
+        
+        return;
+      }
+        
+      this._loopTimeout = setTimeout(this._loop, this.loopInterval);
+    });    
   }
 
 
@@ -168,7 +225,7 @@ class Processor {
    */
   _processBlock (blockId) {
     return new Promise((resolve, reject) => {
-      this._logger.info(`Fetching block ${blockId}`);
+      this.logger.info(`Fetching block ${blockId}`);
       
       this._web3.eth.getBlock(blockId, true, (err, block) => {
         if (err) {
@@ -183,15 +240,14 @@ class Processor {
         throw new Error(`Invalid block id: ${blockId}`);
       }
       
-      this._logger.info(`Processing block #${block.number}: ${block.hash} ...`);
+      this.logger.info(`Processing block #${block.number}: ${block.hash} ...`);
       
       this._invokeHandlers('block', blockId, block);
-    })
-    .then(() => {
-      this._logger.info(`... done processing block #${block.number}: ${block.hash}`);      
+
+      this.logger.info(`... done processing block #${block.number}: ${block.hash}`);      
     })
     .catch((err) => {
-      this._logger.error(err);
+      this.logger.error(err);
       
       this._invokeHandlers('error', blockId, err);
     });
@@ -205,15 +261,15 @@ class Processor {
    * @param {*} result Filter result, usually a block id.
    */
   _filterCallback (err, result) {
-    this._logger.info('Got filter callback');
+    this.logger.info('Got filter callback');
     
     if (err) {
-      return this._logger.error('Got error from filter', err);
+      return this.logger.error('Got error from filter', err);
     }
 
     // if not running then skip
     if (!this.isRunning) {
-      this._logger.warn('Not currently running, so skipping block');
+      this.logger.warn('Not currently running, so skipping block');
 
       return;
     }
@@ -234,7 +290,7 @@ class Processor {
       try {
         handler.fn(eventType, blockId, data);
       } catch (err) {
-        this._logger.error(`Handler '${handler.id}' errored for invocation: ${eventType}, ${blockId}`);
+        this.logger.error(`Handler '${handler.id}' errored for invocation: ${eventType}, ${blockId}`);
       }
     }
   }
