@@ -2,9 +2,11 @@
   "name": "ethereum-blocks",
   "version": "1.0.0",
   "description": "Process blocks from an Ethereum web3 instance, robustly. Catch-up on restart, auto-reconnect to node, etc.",
-  "main": "src/index.js",
+  "main": "dist/ethereumBlocks.js",
   "scripts": {
-    "test": "mocha --ui exports --reporter spec test/*.test.js"
+    "build": "mkdir -p dist && babel src/index.js > dist/ethereumBlocks.js",
+    "test": "mocha --ui exports --reporter spec test/*.test.js",
+    "prepublish": "npm run build && npm test"
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,17 @@
   },
   "homepage": "https://github.com/hiddentao/ethereum-blocks#readme",
   "devDependencies": {
+    "babel-cli": "^6.14.0",
+    "babel-plugin-rename-umd-globals": "0.0.4",
+    "babel-plugin-transform-es2015-modules-umd": "^6.12.0",
+    "babel-preset-es2015": "^6.14.0",
+    "chai": "^3.5.0",
+    "co-mocha": "^1.1.3",
+    "genomatic": "^1.0.0",
+    "geth-private": "^1.4.2",
+    "mocha": "^3.0.2",
+    "sinon": "^1.17.5",
+    "sinon-chai": "^2.8.0",
     "web3": "^0.17.0-alpha"
   }
 }

@@ -1,25 +1,32 @@
 "use strict";
 
 
+const LOGGER = {
+  info: function() {},
+  warn: function() {},
+  error: function() {}
+};
+
+
 /**
  * The block processor.
  */
-export default class Processor {
+class Processor {
   /**
    * Constuct a new instance.
    * 
    * @param {Object} config Configuration.
    * @param {Object} config.web3 A `Web3` instance.
    * @param {Number} [config.loopDelayMs=3000] Milliseconds between checks for new blocks.
-   * @param {Object} [config.logger=console] For logging progress updates.
+   * @param {Object} [config.logger=null] For logging progress updates. If not set then no logging is done. You may set this to `console`.
    * @param {Number} [config.lastBlock=0] Last block that got processed. If set all blocks since will be fetched and processed as soon as the processor starts.
    */
   constructor (config) {
     this._config = config;
-    this._logger = config.logger || console;
-    this._loopDelayMs = config.loopDelayMs || 3000;
     this._web3 = config.web3;
-    this._lastBlock = config.lastBlock;
+    this._logger = config.logger || LOGGER;
+    this._loopDelayMs = config.loopDelayMs || 3000;
+    this._lastBlock = config.lastBlock || 0;
 
     this._blocks = [];
     this._handlers = new Set();
@@ -63,7 +70,7 @@ export default class Processor {
           this._logger.info('Stopped');
           resolve(true);
         } else {
-          this._logger.debug('Not currently processing');
+          this._logger.warn('Not currently processing');
           resolve(false);
         }
       } catch (err) {
@@ -94,7 +101,7 @@ export default class Processor {
           resolve(true);
         });
       } else {
-        this._logger.debug('Already running');
+        this._logger.warn('Already running');
         
         resolve(false);
       }
@@ -108,7 +115,7 @@ export default class Processor {
    * @param {Function} fn Callback function of handler.
    */
   registerHandler (id, fn) {
-    this._logger.debug(`Registering handler: ${id}`);
+    this._logger.info(`Registering handler: ${id}`);
     
     this._handlers.add({
       id: id,
@@ -121,7 +128,7 @@ export default class Processor {
    * @param {Object} handler A handler object returned from a previous call to `registerHandler`.
    */
   deregisterHandler (handler) {
-    this._logger.debug(`Deregistering handler: ${handler.id}`);
+    this._logger.info(`Deregistering handler: ${handler.id}`);
 
     this._handlers.delete(handler);
   }
@@ -132,7 +139,7 @@ export default class Processor {
    */
   _loop () {
     if (!this.isRunning) {
-      this._logger.debug('Not running, so exiting loop');
+      this._logger.warn('Not running, so exiting loop');
       
       return;
     }
@@ -143,7 +150,7 @@ export default class Processor {
       this._processBlock(blockId)
       .finally(() => {
         if (!this.isRunning) {
-          this._logger.debug('Not running, so exiting loop');
+          this._logger.warn('Not running, so exiting loop');
           
           return;
         }
@@ -161,7 +168,7 @@ export default class Processor {
    */
   _processBlock (blockId) {
     return new Promise((resolve, reject) => {
-      this._logger.debug(`Fetching block ${blockId}`);
+      this._logger.info(`Fetching block ${blockId}`);
       
       this._web3.eth.getBlock(blockId, true, (err, block) => {
         if (err) {
@@ -181,7 +188,7 @@ export default class Processor {
       this._invokeHandlers('block', blockId, block);
     })
     .then(() => {
-      this._logger.debug(`... done processing block #${block.number}: ${block.hash}`);      
+      this._logger.info(`... done processing block #${block.number}: ${block.hash}`);      
     })
     .catch((err) => {
       this._logger.error(err);
@@ -198,7 +205,7 @@ export default class Processor {
    * @param {*} result Filter result, usually a block id.
    */
   _filterCallback (err, result) {
-    this._logger.debug('Got filter callback');
+    this._logger.info('Got filter callback');
     
     if (err) {
       return this._logger.error('Got error from filter', err);
@@ -206,7 +213,7 @@ export default class Processor {
 
     // if not running then skip
     if (!this.isRunning) {
-      this._logger.debug('Not currently running, so skipping block');
+      this._logger.warn('Not currently running, so skipping block');
 
       return;
     }
@@ -232,3 +239,6 @@ export default class Processor {
     }
   }
 }
+
+
+module.exports = Processor;
