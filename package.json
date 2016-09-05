@@ -1,0 +1,30 @@
+{
+  "name": "ethereum-blocks",
+  "version": "1.0.0",
+  "description": "Process blocks from an Ethereum web3 instance, robustly. Catch-up on restart, auto-reconnect to node, etc.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha --ui exports --reporter spec test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hiddentao/ethereum-blocks.git"
+  },
+  "keywords": [
+    "ethereum",
+    "blockchain",
+    "processor",
+    "reconnect",
+    "restart",
+    "web3"
+  ],
+  "author": "Ramesh Nair <ram@hiddentao.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hiddentao/ethereum-blocks/issues"
+  },
+  "homepage": "https://github.com/hiddentao/ethereum-blocks#readme",
+  "devDependencies": {
+    "web3": "^0.17.0-alpha"
+  }
+}
