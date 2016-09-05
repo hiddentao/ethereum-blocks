@@ -19,9 +19,9 @@ test['turn on and off'] = function*() {
   
   let mgr = new this.Manager({});
   mgr.logger = {
-    info: this.mocker.spy(),
+    info: spy,
   };
-  
+
   mgr.registerHandler('test', function() {});
 
   spy.should.have.been.calledWithExactly(`Registered handler: test`);

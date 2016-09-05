@@ -1,7 +1,7 @@
 "use strict";
 
 
-const LOGGER = {
+const DUMMY_LOGGER = {
   info: function() {},
   warn: function() {},
   error: function() {}
@@ -28,8 +28,8 @@ class Processor {
     this._filterCallback = this._filterCallback.bind(this);
     this._loop = this._loop.bind(this);
     
-    this.logger = null;
     this.loopInterval = 5000;
+    this.logger = null;
   }
 
   /**
@@ -80,10 +80,10 @@ class Processor {
   set logger (val) {
     this._logger = {};
     
-    for (let key in console) {
+    for (let key in DUMMY_LOGGER) {
       this._logger[key] = (val && typeof val[key] === 'function') 
         ? val[key].bind(val)
-        : console[key]
+        : DUMMY_LOGGER[key]
       ;
     }
   }

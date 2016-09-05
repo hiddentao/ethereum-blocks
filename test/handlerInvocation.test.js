@@ -25,7 +25,7 @@ test.beforeEach = function*() {
 
 test['handler gets passed blocks'] = function*() {
   let spy = this.mocker.spy();
-  
+    
   this.mgr.registerHandler('test', spy);
   
   const startingBlockNumber = this.web3.eth.blockNumber;
