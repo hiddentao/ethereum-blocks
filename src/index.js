@@ -28,10 +28,12 @@ class Processor {
     this._web3 = config.web3;
 
     this._blocks = [];
+    this._lastBlock = null;
     this._handlers = new Set();
     
     this._filterCallback = this._filterCallback.bind(this);
     this._loop = this._loop.bind(this);
+    
     
     this.loopInterval = 5000;
     this.logger = null;
@@ -52,6 +54,16 @@ class Processor {
    */
   get isRunning () {
     return !!this._filter;
+  }
+
+
+  /**
+   * Get the last processed block.
+   * 
+   * @return {Object} Block object. Or `null` if not set.
+   */
+  get lastBlock () {
+    return this._lastBlock;
   }
 
 
@@ -122,9 +134,19 @@ class Processor {
 
   /**
    * Start processing blocks.
+   *
+   * @param {Object} [options] Additional options.
+   * @param {String|Number} [options.catchupFromBlock] Block id or number. 
+   * Catch-up from given block, processing all blocks from this one until 
+   * current, before watching for, new blocks.
+   * 
    * @return {Promise} Resolves to `true` if started, `false` if already running.
    */
-  start () {
+  start (options) {
+    options = Object.assign({
+      catchupFrom: null,
+    }, options);
+    
     return new Promise((resolve) => {
       if (!this.isRunning) {
         this._blocks = [];
@@ -262,6 +284,8 @@ class Processor {
       return this._invokeHandlers('block', blockId, block)
       .then(() => {
         this.logger.info(`... done processing block #${block.number}: ${block.hash}`);      
+        
+        this._lastBlock = block;
       });
     })
     .catch((err) => {
