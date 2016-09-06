@@ -1,6 +1,7 @@
 "use strict";
 
-const Q = require('bluebird');
+const _ = require('lodash'),
+  Q = require('bluebird');
 
 const test = require('./_base')(module);
 
@@ -89,6 +90,74 @@ test['handler error does not affect other handlers'] = function*() {
   errorSpy.should.have.been.calledOnce;
   errorSpy.getCall(0).args[0].should.contain(`Handler 'spy5' errored for invocation`);
 };
+
+
+
+test['a handler can be asynchronous'] = function*() {
+  let logSpy = this.mocker.spy();
+  this.mgr.logger = {
+    info: logSpy,
+    // error: console.error.bind(console),
+  };
+
+  let handler1 = this.mocker.spy(),
+    handler2 = this.mocker.spy(() => {
+      return Q.delay(30000);
+    });
+        
+  this.mgr.registerHandler(`sync`, handler1);
+  this.mgr.registerHandler(`async`, handler2);
+
+  yield this.mgr.start();
+  
+  // wait until we get a block
+  yield this.waitUntilNextBlock();
+  // wait for processor to do its biz
+  yield Q.delay(this.mgr.loopInterval * 1.5);
+  
+  handler1.should.have.been.called;
+  handler1.should.have.been.calledWith('block');
+  
+  handler2.should.have.been.called
+  handler2.should.have.been.calledWith('block');
+
+  // because the async handler takes forever to complete the block processing
+  // does not complete in time.
+  for (let logline of _.flatten(logSpy.args)) {
+    logline.should.not.contain('done processing block');
+  }
+};
+
+
+
+
+test['asynchronous handler errors are handled gracefully too'] = function*() {
+  let logSpy = this.mocker.spy();
+  this.mgr.logger = {
+    error: logSpy,
+    // error: console.error.bind(console),
+  };
+
+  let handler1 = this.mocker.spy(),
+    handler2 = this.mocker.spy(() => {
+      return Promise.reject(new Error('oh dear!'));
+    });
+        
+  this.mgr.registerHandler(`sync`, handler1);
+  this.mgr.registerHandler(`async`, handler2);
+
+  yield this.mgr.start();
+  
+  // wait until we get a block
+  yield this.waitUntilNextBlock();
+  // wait for processor to do its biz
+  yield Q.delay(this.mgr.loopInterval * 1.5);
+  
+  let logs = _.flatten(logSpy.args);
+  logs.join('').should.contain(`Handler 'async' errored for invocation: oh dear!`);
+};
+
+
 
 
 

@@ -8,6 +8,11 @@ const DUMMY_LOGGER = {
 };
 
 
+const _isPromise = function(p) {
+  return (p && typeof p.then === 'function' && typeof p.catch === 'function');
+};
+
+
 /**
  * The block processor.
  */
@@ -149,8 +154,20 @@ class Processor {
 
   /**
    * Register a processing handler to be notified of new blocks.
+   *
+   * The `fn` callback should have the following signature:
+   *
+   *    function(eventType, blockId, data) {}
+   *
+   *    eventType - {String} The event type (either "block" or "error")
+   *    blockId - {String} Id of block.
+   *    data - {Object} Block data or error object.
+   *
+   * If the callback returns a Promise-like object then it will be treated as an 
+   * asynchronous method, otherwise it will be treated as a synchronous method.
+   * 
    * @param {String} id A friendly name of this handler.
-   * @param {Function} fn Callback function of handler.
+   * @param {Function} fn Callback function of handler. 
    */
   registerHandler (id, fn) {
     this._handlers.add({
@@ -241,18 +258,18 @@ class Processor {
       }
       
       this.logger.info(`Processing block #${block.number}: ${block.hash} ...`);
-      
-      this._invokeHandlers('block', blockId, block);
 
-      this.logger.info(`... done processing block #${block.number}: ${block.hash}`);      
+      return this._invokeHandlers('block', blockId, block)
+      .then(() => {
+        this.logger.info(`... done processing block #${block.number}: ${block.hash}`);      
+      });
     })
     .catch((err) => {
       this.logger.error(err);
       
-      this._invokeHandlers('error', blockId, err);
+      return this._invokeHandlers('error', blockId, err);
     });
   }
-
 
   /**
    * Callback handler for web3.filter().
@@ -284,17 +301,52 @@ class Processor {
    * @param {String} eventType The event type.
    * @param {String} blockId Id of block.
    * @param {Object} data Data to pass along.
+   *
+   * @return {Promise} Resolves once all handlers have executed.
    */
   _invokeHandlers (eventType, blockId, data) {
-    for (let handler of this._handlers) {
-      try {
-        handler.fn(eventType, blockId, data);
+    return new Promise((resolve) => {
+      let todo = this._handlers.size;
+      
+      if (!todo) {
+        this.logger.info(`No handlers registered to invoke.`);
 
-        this.logger.info(`Invoked handler ${handler.id} for block ${blockId}`);
-      } catch (err) {
-        this.logger.error(`Handler '${handler.id}' errored for invocation: ${eventType}, ${blockId}`);
+        return resolve();
       }
-    }
+      
+      const done = (err, handler) => {
+        if (err) {
+          this.logger.error(`Handler '${handler.id}' errored for invocation: ${err.message}`);
+        } else {
+          this.logger.info(`Invoked handler '${handler.id}'`);
+        }
+    
+        todo--;
+        if (!todo) {
+          this.logger.info(`Finished invoking handlers for ${eventType} event on block ${blockId}`);
+          
+          resolve();
+        }
+      }
+    
+      this.logger.info(`Going to invoke ${todo} handlers for ${eventType} event on block ${blockId}...`);
+      
+      this._handlers.forEach((h) => {
+        try {
+          let promise = h.fn(eventType, blockId, data);
+          
+          if (_isPromise(promise)) {
+            promise
+            .then(() => done(null, h))
+            .catch((err) => done(err, h))
+          } else {
+            done(null, h);
+          }
+        } catch (err) {
+          done(err, h);
+        }        
+      });
+    });
   }
 }
 
