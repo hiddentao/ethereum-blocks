@@ -86,6 +86,8 @@ module.exports = function(_module) {
 
   tools.stopMining = function*() {
     yield this.gethExec('miner.stop();');
+    
+    console.log(`Last block mined: ${this.web3.eth.blockNumber}`);
   }
 
   const test = {

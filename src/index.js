@@ -233,7 +233,7 @@ class Processor {
    */
   _catchupFrom (blockIdOrNumber) {
     return new Promise((resolve, reject) => {
-      if (!blockIdOrNumber) {
+      if (null === blockIdOrNumber || undefined === blockIdOrNumber) {
         this.logger.info('No catch-up block specified, skipping catch-up');
         
         return resolve();
