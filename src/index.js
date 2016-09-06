@@ -240,9 +240,13 @@ class Processor {
       }
       
       // first lets get this block
-      this._web3.eth.getBlock((err, startBlock) => {
+      this._web3.eth.getBlock(blockIdOrNumber, (err, startBlock) => {
         if (err) {
-          return reject(new Error(`Catch-up starting block is invalid: ${blockIdOrNumber}`));
+          return reject(new Error(`Unable to fetch block ${blockIdOrNumber}: ${err.message}`));
+        }
+        
+        if (!startBlock) {
+          return reject(new Error(`Catch-up starting block invalid: ${blockIdOrNumber}`));
         }
         
         const startBlockNum = startBlock.number;
