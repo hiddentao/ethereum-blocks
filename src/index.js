@@ -140,30 +140,36 @@ class Processor {
    * Catch-up from given block, processing all blocks from this one until 
    * current, before watching for, new blocks.
    * 
-   * @return {Promise} Resolves to `true` if started, `false` if already running.
+   * @return {Promise} Resolves to `true` if started, `false` if already running. Rejects if an error occurs.
    */
   start (options) {
     options = Object.assign({
       catchupFrom: null,
     }, options);
     
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (!this.isRunning) {
         this._blocks = [];
         
-        this._filter = this._web3.eth.filter('latest');
-        
-        // need this delay here otherwise when the filter callback gets called, 
-        // this._filter may not be set yet. Usually happens if we're mining too 
-        // quickly on a private blockchain.
-        setTimeout(() => {
-          this._filter.watch(this._filterCallback);
+        this._catchupFrom(options.catchupFrom)
+        .then(() => {
+          this._filter = this._web3.eth.filter('latest');
+          // need this delay here otherwise when the filter callback gets called, 
+          // this._filter may not be set yet. Usually happens if we're mining too 
+          // quickly on a private blockchain.
+          setTimeout(() => {
+            this._filter.watch(this._filterCallback);
+            
+            this.logger.info('Started');
+            this._loop();
+            
+            resolve(true);
+          }, 0);          
+        })        
+        .catch((err) => {
+          this.logger.error(`Error running catch-up logic: ${err.message}`);
           
-          this.logger.info('Started');
-          this._loop();
-          
-          resolve(true);
-          
+          reject(err);
         });
       } else {
         this.logger.warn('Already running');
@@ -208,6 +214,56 @@ class Processor {
     this._handlers.delete(handler);
     
     this.logger.info(`Deregistered handler: ${handler.id}`);
+  }
+
+  /**
+   * Catch-up with all blocks which have taken place since given block.
+   *
+   * This method usually gets executed from `start()` before the 
+   * block-watching filter gets setup. Internally it will work out which blocks 
+   * have appeared AFTER the given one (based on block number differences) and 
+   * then add all the relevant numbers to the `this._blocks` array. This makes 
+   * the assumption that block numbers are strictly sequential, which is 
+   * usually the case unless you're running a private network with extremely 
+   * low mining difficulty.
+   *
+   * @param {Number|String} blockIdOrNumber Block id or number.
+   *
+   * @return {Promise} Resolves once done.
+   */
+  _catchupFrom (blockIdOrNumber) {
+    return new Promise((resolve, reject) => {
+      if (!blockIdOrNumber) {
+        this.logger.info('No catch-up block specified, skipping catch-up');
+        
+        return resolve();
+      }
+      
+      // first lets get this block
+      this._web3.eth.getBlock((err, startBlock) => {
+        if (err) {
+          return reject(new Error(`Catch-up starting block is invalid: ${blockIdOrNumber}`));
+        }
+        
+        const startBlockNum = startBlock.number;
+        
+        // now get latest block number
+        this._web3.eth.getBlockNumber((err, blockNum) => {
+          if (err) {
+            return reject(new Error('Unable to fetch latest block number.'));
+          }
+          
+          // now let's add the differences
+          for (let i=startBlockNum+1; blockNum>=i; ++i) {
+            this._blocks.push(i);
+          }
+
+          this.logger.info(`Need to catch-up with ${blockNum - startBlockNum} blocks`);
+          
+          resolve();
+        });
+      });
+    });
   }
 
 
@@ -259,14 +315,14 @@ class Processor {
 
   /**
    * Process given block.
-   * @param {String} blockId Block hash.
+   * @param {String|Number} blockIdOrNumber Block hash or number.
    * @return {Promise}
    */
-  _processBlock (blockId) {
+  _processBlock (blockIdOrNumber) {
     return new Promise((resolve, reject) => {
-      this.logger.info(`Fetching block ${blockId}`);
+      this.logger.info(`Fetching block ${blockIdOrNumber}`);
       
-      this._web3.eth.getBlock(blockId, true, (err, block) => {
+      this._web3.eth.getBlock(blockIdOrNumber, true, (err, block) => {
         if (err) {
           return reject(err);
         } else {
@@ -276,12 +332,12 @@ class Processor {
     })
     .then((block) => {
       if (!block) {
-        throw new Error(`Invalid block id: ${blockId}`);
+        throw new Error(`Invalid block id: ${blockIdOrNumber}`);
       }
       
       this.logger.info(`Processing block #${block.number}: ${block.hash} ...`);
 
-      return this._invokeHandlers('block', blockId, block)
+      return this._invokeHandlers('block', block.hash, block)
       .then(() => {
         this.logger.info(`... done processing block #${block.number}: ${block.hash}`);      
         
@@ -291,7 +347,7 @@ class Processor {
     .catch((err) => {
       this.logger.error(err);
       
-      return this._invokeHandlers('error', blockId, err);
+      return this._invokeHandlers('error', block.hash, err);
     });
   }
 
@@ -299,7 +355,7 @@ class Processor {
    * Callback handler for web3.filter().
    *
    * @param {Error} err If any error occurred.
-   * @param {*} result Filter result, usually a block id.
+   * @param {*} result Filter result, usually a block hash.
    */
   _filterCallback (err, result) {
     this.logger.info('Got filter callback');
@@ -323,7 +379,7 @@ class Processor {
    * Invoke registered handlers.
    *
    * @param {String} eventType The event type.
-   * @param {String} blockId Id of block.
+   * @param {String} blockId Block hash.
    * @param {Object} data Data to pass along.
    *
    * @return {Promise} Resolves once all handlers have executed.
