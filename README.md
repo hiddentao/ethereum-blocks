@@ -1,7 +1,9 @@
 # ethereum-blocks
 
-Process blocks from an Ethereum web3 instance, robustly. Catch-up on restart, auto-reconnect to node, etc.
+[![Build Status](https://secure.travis-ci.org/hiddentao/ethereum-blocks.png?branch=master)](http://travis-ci.org/hiddentao/ethereum-blocks) [![Twitter URL](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Follow&maxAge=2592000)](https://twitter.com/hiddentao)
 
+
+WIP...
 
 ## Contributions
 
