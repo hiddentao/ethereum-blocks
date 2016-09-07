@@ -40,17 +40,13 @@ test['catch-up block is invalid'] = function*() {
 
 
 test['no catch up by default'] = function*() {
-  yield this.waitUntilNextBlock();
-  yield this.stopMining();
-
   let spy = this.mocker.spy();
   
   this.mgr.registerHandler('test', spy);
   
-  let blockNumber = this.web3.eth.blockNumber;
-  
+  let blockNumber = yield this.waitUntilNextBlock();
+
   yield this.mgr.start();
-  yield this.startMining();
   
   yield this.waitUntilNextBlock();
   yield Q.delay(this.mgr.loopInterval * 1.5);
@@ -63,19 +59,15 @@ test['no catch up by default'] = function*() {
 
 
 test['no catch up if given null'] = function*() {
-  yield this.waitUntilNextBlock();
-  yield this.stopMining();
-
   let spy = this.mocker.spy();
   
   this.mgr.registerHandler('test', spy);
   
-  let blockNumber = this.web3.eth.blockNumber;
-  
+  let blockNumber = yield this.waitUntilNextBlock();
+
   yield this.mgr.start({
     catchupFrom: null,
   });
-  yield this.startMining();
   
   yield this.waitUntilNextBlock();
   yield Q.delay(this.mgr.loopInterval * 1.5);
@@ -88,21 +80,15 @@ test['no catch up if given null'] = function*() {
 
 
 test['no catch up if given undefined'] = function*() {
-  yield this.waitUntilNextBlock();
-  
-  yield this.stopMining();
-  
   let spy = this.mocker.spy();
   
   this.mgr.registerHandler('test', spy);
   
-  let blockNumber = this.web3.eth.blockNumber;
+  let blockNumber = yield this.waitUntilNextBlock();
   
   yield this.mgr.start({
     catchupFrom: undefined,
-  });
-  
-  yield this.startMining();
+  });  
 
   yield this.waitUntilNextBlock();
   yield Q.delay(this.mgr.loopInterval * 1.5);
