@@ -5,7 +5,7 @@
 Process blocks from an Ethereum [web3](https://github.com/ethereum/web3.js/) instance robustly.
 
 This library uses [web3.eth.filter](https://github.com/ethereum/wiki/wiki/JavaScript-API#web3ethfilter) to listen for the latest blocks on a 
-chain. When a block received all registered "handlers" to perform any 
+chain. When a block is received all registered handlers are invoked to perform any 
 required processing on the block data.
 
 Features:
