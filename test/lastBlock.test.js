@@ -1,5 +1,7 @@
 "use strict";
 
+const _ = require('lodash');
+
 const test = require('./_base')(module);
 
 test.before = function*() {
@@ -28,11 +30,13 @@ test['no last block by default'] = function*() {
 test['keeps track of last block processed'] = function*() {
   let lastBlock;
   
-  let spy = this.mocker.spy((eventType, blockId, block) => {
-    lastBlock = block;
+  this.mgr.registerHandler('test', function(eventType, blockId, data) {
+    if ('block' === eventType) {
+      lastBlock = data;
+    } else {
+      console.error(data);
+    }
   });
-  
-  this.mgr.registerHandler('test', spy);
   
   yield this.mgr.start();
   
@@ -43,5 +47,5 @@ test['keeps track of last block processed'] = function*() {
   yield this.stopMining();
   yield this.mgr.stop();
   
-  lastBlock.hash.should.eql(this.mgr.lastBlock.hash);
+  _.get(lastBlock, 'hash', '').should.eql(_.get(this.mgr.lastBlock, 'hash'));
 };
