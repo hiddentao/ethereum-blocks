@@ -40,8 +40,7 @@ test['keeps track of last block processed'] = function*() {
   
   yield this.mgr.start();
   
-  // wait until we get a block twice
-  yield this.waitUntilNextBlock();
+  // wait until we get a block
   yield this.waitUntilNextBlock();
   
   yield this.stopMining();

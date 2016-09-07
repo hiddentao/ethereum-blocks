@@ -5,7 +5,7 @@
   "main": "dist/ethereumBlocks.js",
   "scripts": {
     "build": "mkdir -p dist && babel src/index.js > dist/ethereumBlocks.js",
-    "test": "npm run build && istanbul cover _mocha -- --timeout 60000 --ui exports --reporter spec test/*.test.js",
+    "test": "npm run build && istanbul cover _mocha -- --timeout 120000 --ui exports --reporter spec test/*.test.js",
     "prepublish": "npm test"
   },
   "repository": {
