@@ -1,6 +1,7 @@
 "use strict";
 
-const _ = require('lodash');
+const _ = require('lodash'),
+  Q = require('bluebird');
 
 const test = require('./_base')(module);
 
