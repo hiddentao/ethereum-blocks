@@ -175,7 +175,7 @@ console.log( blocks.connectionCheckInterval );  /* 5000 */
 blocks.connectionCheckInterval = 100; /* change it to check every 100ms */
 ```
 
-## Processing loop interval
+### Processing loop interval
 
 You can change set how often the processing loop should run using the `loopInterval` property. This is measured in milliseconds and is 5000 by default (i.e. 5 seconds):
 
