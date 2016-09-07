@@ -42,8 +42,9 @@ test['keeps track of last block processed'] = function*() {
   
   // wait until we get a block
   yield this.waitUntilNextBlock();
-  
   yield this.stopMining();
+
+  yield Q.delay(this.mgr.loopInterval);
   yield this.mgr.stop();
   
   _.get(lastBlock, 'hash', '').should.eql(_.get(this.mgr.lastBlock, 'hash'));
