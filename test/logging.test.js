@@ -2,13 +2,16 @@
 
 const test = require('./_base')(module);
 
+test.beforeEach = function*() {
+  this.mgr = new this.Manager({});
+}
+
+
 
 test['nothing by default'] = function*() {
-  let mgr = new this.Manager({});
-  
   let spy = this.mocker.spy(console, 'info');
   
-  mgr.registerHandler('test', function() {});
+  this.mgr.registerHandler('test', function() {});
   
   spy.should.not.have.been.called;
 };
@@ -17,18 +20,17 @@ test['nothing by default'] = function*() {
 test['turn on and off'] = function*() {
   let spy = this.mocker.spy();
   
-  let mgr = new this.Manager({});
-  mgr.logger = {
+  this.mgr.logger = {
     info: spy,
   };
 
-  mgr.registerHandler('test', function() {});
+  this.mgr.registerHandler('test', function() {});
 
   spy.should.have.been.calledWithExactly(`Registered handler: test`);
   
-  mgr.logger = null;
+  this.mgr.logger = null;
 
-  mgr.registerHandler('test2', function() {});
+  this.mgr.registerHandler('test2', function() {});
   
   spy.callCount.should.eql(1);
 };
@@ -38,10 +40,9 @@ test['turn on and off'] = function*() {
 test['must be valid logger'] = function*() {
   let spy = this.mocker.spy();
   
-  let mgr = new this.Manager({});
-  mgr.logger = 'blah';
+  this.mgr.logger = 'blah';
   
-  mgr.registerHandler('test', function() {});
+  this.mgr.registerHandler('test', function() {});
 };
 
 

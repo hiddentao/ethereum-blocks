@@ -31,6 +31,8 @@ test['catch-up block is invalid'] = function*() {
     throw -1;
   } catch (err) {
     err.message.should.eql('Catch-up starting block invalid: invalid');
+    
+    this.mgr.isRunning.should.be.false;
   }
 };
 

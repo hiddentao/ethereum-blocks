@@ -40,6 +40,7 @@ test['keeps track of last block processed'] = function*() {
   yield this.waitUntilNextBlock();
   yield this.waitUntilNextBlock();
   
+  yield this.stopMining();
   yield this.mgr.stop();
   
   lastBlock.hash.should.eql(this.mgr.lastBlock.hash);

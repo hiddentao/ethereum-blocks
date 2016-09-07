@@ -1,7 +1,7 @@
 {
   "name": "ethereum-blocks",
   "version": "1.0.0",
-  "description": "Process blocks from an Ethereum web3 instance, robustly. Catch-up on restart, auto-reconnect to node, etc.",
+  "description": "Process blocks from an Ethereum web3 instance robustly. Catch-up on restart, auto-reconnect to node, etc.",
   "main": "dist/ethereumBlocks.js",
   "scripts": {
     "build": "mkdir -p dist && babel src/index.js > dist/ethereumBlocks.js",

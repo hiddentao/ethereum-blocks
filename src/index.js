@@ -29,14 +29,15 @@ class Processor {
 
     this._blocks = [];
     this._lastBlock = null;
-    this._handlers = new Set();
+    this._handlers = new Map();
     
     this._filterCallback = this._filterCallback.bind(this);
     this._loop = this._loop.bind(this);
+    this._waitForConnection = this._waitForConnection.bind(this);
     
-    
-    this.loopInterval = 5000;
-    this.logger = null;
+    this._logger = DUMMY_LOGGER;
+    this._loopIntervalMs = 5000;
+    this._connectionCheckIntervalMs = 5000;
   }
 
   /**
@@ -79,8 +80,29 @@ class Processor {
    * @param {Number} val
    */
   set loopInterval (val) {
+    this.logger.info(`Loop interval changed: ${val}`);
+
     this._loopIntervalMs = val;
   }
+
+
+  /**
+   * Get the connection check interval in ms.
+   * @return {Number}
+   */
+  get connectionCheckInterval () {
+    return this._connectionCheckIntervalMs;
+  }
+  /**
+   * Set the connection check interval in ms.
+   * @param {Number} val
+   */
+  set connectionCheckInterval (val) {
+    this.logger.info(`Connection check interval changed: ${val}`);
+    
+    this._connectionCheckIntervalMs = val;
+  }
+
 
 
   /**
@@ -116,7 +138,6 @@ class Processor {
         if (this.isRunning) {
           clearTimeout(this._loopTimeout);
           this._filter.stopWatching();
-          this._web3.reset();
           this._filter = null;                  
           this._blocks = [];
           
@@ -153,22 +174,16 @@ class Processor {
         
         this._catchupFrom(options.catchupFrom)
         .then(() => {
-          this._filter = this._web3.eth.filter('latest');
-          // need this delay here otherwise when the filter callback gets called, 
-          // this._filter may not be set yet. Usually happens if we're mining too 
-          // quickly on a private blockchain.
-          setTimeout(() => {
-            this._filter.watch(this._filterCallback);
-            
-            this.logger.info('Started');
-            this._loop();
-            
-            resolve(true);
-          }, 0);          
+          return this._startFilterLoop();
         })        
+        .then(resolve)
         .catch((err) => {
-          this.logger.error(`Error running catch-up logic: ${err.message}`);
-          
+          this.logger.error(`Error starting: ${err.message}`);
+
+          // cleanup
+          this._filter = null;                  
+          this._blocks = [];
+
           reject(err);
         });
       } else {
@@ -194,26 +209,23 @@ class Processor {
    * If the callback returns a Promise-like object then it will be treated as an 
    * asynchronous method, otherwise it will be treated as a synchronous method.
    * 
-   * @param {String} id A friendly name of this handler.
+   * @param {String} id Unique id of handler.
    * @param {Function} fn Callback function of handler. 
    */
   registerHandler (id, fn) {
-    this._handlers.add({
-      id: id,
-      fn: fn
-    });
+    this._handlers.set(id, fn);
     
     this.logger.info(`Registered handler: ${id}`);
   }
   
   /**
    * Deregister a previously registered processing handler.
-   * @param {Object} handler A handler object returned from a previous call to `registerHandler`.
+   * @param {String} id Unique id of handler.
    */
-  deregisterHandler (handler) {
-    this._handlers.delete(handler);
+  deregisterHandler (id) {
+    this._handlers.delete(id);
     
-    this.logger.info(`Deregistered handler: ${handler.id}`);
+    this.logger.info(`Deregistered handler: ${id}`);
   }
 
   /**
@@ -272,6 +284,49 @@ class Processor {
 
 
   /**
+   * Start filter loop.
+   *
+   * @return {Promise}
+   */
+  _startFilterLoop () {
+    return new Promise((resolve) => {
+      this._filter = this._web3.eth.filter('latest');
+      // need this delay here otherwise when the filter callback gets called, 
+      // this._filter may not be set yet. Usually happens if we're mining too 
+      // quickly on a private blockchain.
+      setTimeout(() => {
+        this._filter.watch(this._filterCallback);
+        
+        this.logger.info('Started');
+        this._loop();
+        
+        this.logger.info('Filter loop started');
+        
+        resolve(true);
+      }, 0);      
+    });
+  }
+  
+  
+  /**
+   * Wait for the connection to return.
+   */
+  _waitForConnection () {
+    // if connected again!
+    if (this.isConnected) {
+      this.logger.info('Connection re-established');
+      
+      // if we were running previously then re-start the filter loop again
+      if (this.isRunning) {
+        return this._startFilterLoop();
+      }
+    } else {
+      setTimeout(this._waitForConnection, this.connectionCheckInterval);
+    }
+  }
+
+
+  /**
    * Inner loop to process blocks.
    */
   _loop () {
@@ -281,6 +336,13 @@ class Processor {
       return;
     }
 
+    // if not connected
+    if (!this.isConnected) {
+      this.logger.warn('Connection lost, waiting for connection');
+      
+      return this._waitForConnection();
+    }
+        
     new Promise((resolve) => {
       const numBlocks = this._blocks.length;
       
@@ -398,11 +460,11 @@ class Processor {
         return resolve();
       }
       
-      const done = (err, handler) => {
+      const done = (err, id) => {
         if (err) {
-          this.logger.error(`Handler '${handler.id}' errored for invocation: ${err.message}`);
+          this.logger.error(`Handler '${id}' errored for invocation: ${err.message}`);
         } else {
-          this.logger.info(`Invoked handler '${handler.id}'`);
+          this.logger.info(`Invoked handler '${id}'`);
         }
     
         todo--;
@@ -415,19 +477,19 @@ class Processor {
     
       this.logger.info(`Going to invoke ${todo} handlers for ${eventType} event on block ${blockId}...`);
       
-      this._handlers.forEach((h) => {
+      this._handlers.forEach((fn, id) => {
         try {
-          let promise = h.fn(eventType, blockId, data);
+          let promise = fn(eventType, blockId, data);
           
           if (_isPromise(promise)) {
             promise
-            .then(() => done(null, h))
-            .catch((err) => done(err, h))
+            .then(() => done(null, id))
+            .catch((err) => done(err, id))
           } else {
-            done(null, h);
+            done(null, id);
           }
         } catch (err) {
-          done(err, h);
+          done(err, id);
         }        
       });
     });

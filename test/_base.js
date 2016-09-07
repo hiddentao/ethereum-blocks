@@ -68,15 +68,18 @@ module.exports = function(_module) {
   tools.waitUntilNextBlock = function*() {
     const blockNum = this.web3.eth.blockNumber;
     
-    yield new Q((resolve) => {
+    return yield new Q((resolve) => {
       const _waitIntervalTimer = setInterval(() => {
-        if (this.web3.eth.blockNumber !== blockNum) {
+        const latestBlockNum = this.web3.eth.blockNumber;
+        
+        if (latestBlockNum !== blockNum) {
           clearInterval(_waitIntervalTimer);
+          
+          console.log(`Latest block number: ${latestBlockNum}`);
 
-          // let other processing take place before we return
-          setTimeout(resolve);
+          resolve(latestBlockNum);
         }
-      }, 2000)
+      }, 100);
     });
   };
 
