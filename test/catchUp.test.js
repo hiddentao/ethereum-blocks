@@ -102,29 +102,6 @@ test['no catch up if given undefined'] = function*() {
 
 
 
-test['no catch up possible'] = function*() {
-  yield this.waitUntilNextBlock();
-
-  let spy = this.mocker.spy();
-  
-  this.mgr.registerHandler('test', spy);
-  
-  let blockNumber = this.web3.eth.blockNumber;
-  
-  yield this.mgr.start({
-    catchupFrom: blockNumber
-  });
-
-  yield this.waitUntilNextBlock();
-  yield Q.delay(this.mgr.loopInterval * 1.5);
-  
-  yield this.mgr.stop();
-
-  spy.should.have.been.called;
-  spy.args[0][2].number.should.be.gt(blockNumber);
-};
-
-
 
 test['catch up possible'] = function*() {  
   /*
