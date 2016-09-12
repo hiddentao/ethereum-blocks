@@ -10,13 +10,13 @@ required processing on the block data.
 
 Features:
 
-* Works with any [web3](https://github.com/ethereum/web3.js/) instance
-* No dependencies - works in Node, Electron apps and browsers
 * Can *catch up* on all missed blocks when restarted
 * Detects if connection has dropped and waits until re-established
 * Processing handlers can be asynchronous
 * Errors are gracefully handled
 * Customizable logging, can be turned on/off at runtime
+* Works with any [web3](https://github.com/ethereum/web3.js/) instance
+* No dependencies - works in Node, Electron apps and browsers
 * Automated [tests](https://travis-ci.org/hiddentao/ethereum-blocks)
 
 ## Installation
