@@ -92,6 +92,7 @@
           try {
             if (_this.isRunning) {
               clearTimeout(_this._loopTimeout);
+              clearTimeout(_this._connectionCheckTimeout);
               _this._filter.stopWatching();
               _this._filter = null;
               _this._blocks = [];
@@ -228,7 +229,7 @@
             return this._startFilterLoop();
           }
         } else {
-          setTimeout(this._waitForConnection, this.connectionCheckInterval);
+          this._connectionCheckTimeout = etTimeout(this._waitForConnection, this.connectionCheckInterval);
         }
       }
     }, {

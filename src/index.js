@@ -137,6 +137,7 @@ class Processor {
       try {
         if (this.isRunning) {
           clearTimeout(this._loopTimeout);
+          clearTimeout(this._connectionCheckTimeout);
           this._filter.stopWatching();
           this._filter = null;                  
           this._blocks = [];
@@ -321,7 +322,7 @@ class Processor {
         return this._startFilterLoop();
       }
     } else {
-      setTimeout(this._waitForConnection, this.connectionCheckInterval);
+      this._connectionCheckTimeout = etTimeout(this._waitForConnection, this.connectionCheckInterval);
     }
   }
 
