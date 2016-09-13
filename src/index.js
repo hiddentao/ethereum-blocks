@@ -322,7 +322,7 @@ class Processor {
         return this._startFilterLoop();
       }
     } else {
-      this._connectionCheckTimeout = etTimeout(this._waitForConnection, this.connectionCheckInterval);
+      this._connectionCheckTimeout = setTimeout(this._waitForConnection, this.connectionCheckInterval);
     }
   }
 
