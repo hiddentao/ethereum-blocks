@@ -355,18 +355,16 @@ class Processor {
         
       // remove blocks from backlog array
       const blockIds = this._blocks.splice(0, numBlocks);
-        
-      let blocksProcessed = 0;
       
-      for (let blockId of blockIds) {
-        this._processBlock(blockId)
-        .then(() => {
-          blocksProcessed++;
-          if (numBlocks <= blocksProcessed) {
-            resolve();
-          }
-        });   
-      } 
+      let __nextBlock = () => {
+        if (!blockIds.length) {
+          return resolve();
+        }
+        
+        this._processBlock(blockIds.shift()).then(__nextBlock);
+      };
+      __nextBlock();
+      
     })
     .then(() => {
       if (!this.isRunning) {

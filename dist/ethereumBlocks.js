@@ -262,37 +262,14 @@
           // remove blocks from backlog array
           var blockIds = _this5._blocks.splice(0, numBlocks);
 
-          var blocksProcessed = 0;
-
-          var _iteratorNormalCompletion = true;
-          var _didIteratorError = false;
-          var _iteratorError = undefined;
-
-          try {
-            for (var _iterator = blockIds[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-              var blockId = _step.value;
-
-              _this5._processBlock(blockId).then(function () {
-                blocksProcessed++;
-                if (numBlocks <= blocksProcessed) {
-                  resolve();
-                }
-              });
+          var __nextBlock = function __nextBlock() {
+            if (!blockIds.length) {
+              return resolve();
             }
-          } catch (err) {
-            _didIteratorError = true;
-            _iteratorError = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion && _iterator.return) {
-                _iterator.return();
-              }
-            } finally {
-              if (_didIteratorError) {
-                throw _iteratorError;
-              }
-            }
-          }
+
+            _this5._processBlock(blockIds.shift()).then(__nextBlock);
+          };
+          __nextBlock();
         }).then(function () {
           if (!_this5.isRunning) {
             _this5.logger.warn('Not running, so exiting loop');
