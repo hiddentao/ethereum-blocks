@@ -1,6 +1,6 @@
 {
   "name": "ethereum-blocks",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Process blocks from Ethereum client nodes robustly. Catch-up on restart, auto-reconnect to node, etc.",
   "main": "dist/ethereumBlocks.js",
   "scripts": {
