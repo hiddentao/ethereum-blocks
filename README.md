@@ -29,7 +29,7 @@ $ npm install ethereum-blocks
 
 ```js
 import Web3 from 'web3';
-import EthereumBlocks from 'ethereum-blocks';
+import * as EthereumBlocks from 'ethereum-blocks';
 
 const web3 = new Web3(/* connect to running Geth node */);
 
