@@ -412,7 +412,7 @@ class Processor {
     .catch((err) => {
       this.logger.error(err);
       
-      return this._invokeHandlers('error', block.hash, err);
+      return this._invokeHandlers('error', null, err);
     });
   }
 
