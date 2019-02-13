@@ -310,7 +310,7 @@
         }).catch(function (err) {
           _this6.logger.error(err);
 
-          return _this6._invokeHandlers('error', block.hash, err);
+          return _this6._invokeHandlers('error', null, err);
         });
       }
     }, {
